@@ -464,6 +464,30 @@ _.query( MyCollection, {
 //either have more than 10 likes or contain the color red.
 ```
 
+Getters
+================
+Getters may be supplied as a function.  The getter function takes two arguments, specifying an object and a key.
+The example getter below behaves exactly as if no getter were provided:
+
+```js
+_.query(MyCollection, {likes: 12}, function(obj, key) { return obj[key]; });
+```
+
+Alternately, getters may be supplied as a string naming a method on the object itself, which takes a single returns a value for the key e.g.
+```js
+a = new Backbone.Collection([
+        {
+          id: 1,
+          title: "test"
+        }, {
+          id: 2,
+          title: "about"
+        }
+      ]);
+      result = _.query(a.models, {
+        title: "about"
+      }, "get");
+```
 
 Chainable API
 =============
@@ -541,7 +565,14 @@ The index method takes either a single key, or a key and a function.
     result = query.and("title", "Home").run()
 ```
 
+Query function
+==========
+You can also retrieve an independent function representing the constraint, which can be passed to `Array.filter`, e.g.:
 
+```js
+fn = _.Query({ likes: 12 });
+result = myArray.filter(fn);
+```
 
 
 

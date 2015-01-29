@@ -472,6 +472,18 @@ describe "Underscore Query Tests", ->
     assert.equal result.length, 1
     assert.equal result[0].get("title"), "about"
 
+
+  it "works with a getter function", ->
+    Backbone = require "backbone"
+
+    getter = (obj,key) -> obj[key]* 2.5
+
+    a = create()
+    result = _.query a, likes: 30, getter
+    assert.equal result.length, 1
+    assert.equal result[0].title, "Home"
+
+
   it "can be mixed into backbone collections", ->
     Backbone = require "backbone"
     class Collection extends Backbone.Collection
@@ -764,3 +776,22 @@ describe "Underscore Query Tests", ->
     a = create()
     result = _.query a, {likes: { $not: 2, $lt: 20}}
     assert.equal result.length, 1
+
+  it "$type operator", ->
+    a = create()
+    result = _.query a, {likes: { $type: 'number'}}
+    assert.equal result.length, 3
+    result = _.query a, {likes: { $type: 'string'}}
+    assert.equal result.length, 0
+    result = _.query a, {colors: { $type: 'object'}}
+    assert.equal result.length, 3
+    result = _.query a, {title: { $type: 'string'}}
+    assert.equal result.length, 3
+
+
+  it "returns Query function", ->
+    a = create()
+    fn = _.Query {likes: 12}
+    result = a.filter fn
+    assert.equal result.length, 1
+    assert.equal result[0].likes, 12

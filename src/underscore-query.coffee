@@ -365,6 +365,11 @@ makeTest = (query, getter) -> single(parseQuery(query), parseGetter(getter))
 # Find one function that returns first matching result
 findOne = (items, query, getter) -> runQuery(items, query, getter, true)
 
+#Return an independent function that can be passed to array.filter etc.
+queryFn = (query, getter, isScore) ->
+  if getter then getter = parseGetter(getter)
+  single(parseQuery(query), getter, isScore) unless (utils.getType(query) is "Function")
+
 # The main function to be mxied into underscore that takes a collection and a raw query
 runQuery = (items, query, getter, first, isScore) ->
   if arguments.length < 2
@@ -395,7 +400,7 @@ expose = (_, mixin = true) ->
     _ = underscoreReplacement()
     mixin = false
   createUtils(_)
-  if mixin then _.mixin {query:runQuery, q:runQuery}
+  if mixin then _.mixin {query:runQuery, q:runQuery, Query: queryFn}
   runQuery
 
 # We now need to determine the environment that we are in
