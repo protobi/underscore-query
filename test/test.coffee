@@ -795,3 +795,16 @@ describe "Underscore Query Tests", ->
     result = a.filter fn
     assert.equal result.length, 1
     assert.equal result[0].likes, 12
+
+
+  it "$or operator", ->
+    a = create()
+
+    # This is standard MongoDB syntax, and the test passes
+    result = _.query a, {$or: [{likes: {$gt:1, $lte:2}}, {likes: {$gt:11, $lte:12}}]}
+    assert.equal result.length, 2
+
+#    This is not standard MongoDB syntax but I would like it to work
+#    result = _.query a, {likes:{ $or: [{$gt:1, $lte:2}, {$gt:11, $lte:12}]}}
+#    assert.equal result.length, 2
+#    console.log result
