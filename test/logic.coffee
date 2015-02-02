@@ -2,17 +2,22 @@
 require "coffee-script"
 assert = require('assert')
 _ = require "underscore"
-require("../src/underscore-query")(_)
+Logic = require("../src/logic")
+_.query = Logic.query
 
 _collection =  [
   {title:"Home", colors:["red","yellow","blue"], likes:12, featured:true, content: "Dummy content about coffeescript"}
-  {title:"About", colors:["red"], likes:2, featured:true, content: "dummy content about javascript"}
+  {title:"About", colors:["red"], likes:2, featured: true, content: "dummy content about javascript"}
   {title:"Contact", colors:["red","blue"], likes:20, content: "Dummy content about PHP"}
 ]
+
 
 create = -> _.clone(_collection)
 
 describe "Underscore Query Tests", ->
+
+  it "Says hello", ->
+    assert true
 
   it "Equals query", ->
     a = create()
@@ -23,7 +28,7 @@ describe "Underscore Query Tests", ->
     result = _.query a, colors: "blue"
     assert.equal result.length, 2
 
-    result = _.query a, colors: ["red", "blue"]
+    result = _.query a, colors: {$deepEquals: ["red", "blue"]}
     assert.equal result.length, 1
 
   it "Simple equals query (no results)", ->
@@ -31,12 +36,18 @@ describe "Underscore Query Tests", ->
     result = _.query a, title:"Homes"
     assert.equal result.length, 0
 
+  it "Simple equals query (boolean)", ->
+    a = create()
+    result = _.query a, featured: true
+    assert.equal result.length, 2
+
+
   it "Simple equals query with explicit $equal", ->
     a = create()
     result = _.query a, title: {$equal: "About"}
     assert.equal result.length, 1
     assert.equal result[0].title, "About"
-
+#
   it "$contains operator", ->
     a = create()
     result = _.query a, colors: {$contains: "blue"}
@@ -96,7 +107,7 @@ describe "Underscore Query Tests", ->
     result = _.query a, title: {$nin: ["Home","About"]}
     assert.equal result.length, 1
     assert.equal result[0].title, "Contact"
-
+#
   it "$all operator", ->
     a = create()
     result = _.query a, colors: {$all: ["red","blue"]}
@@ -197,38 +208,44 @@ describe "Underscore Query Tests", ->
     assert.equal result.length, 1
     assert.equal result[0].title, "Contact"
 
-  it "$cb - callback - checking 'this' is the model", ->
-    a = create()
-    result = _.query a, title:
-      $cb: (attr) -> @title is "Home"
-    assert.equal result.length, 1
-    assert.equal result[0].title, "Home"
-
+#  it "$cb - callback - checking 'this' is the model", ->
+#    a = create()
+#    result = _.query a, title:
+#      $cb: (attr) -> @title is "Home"
+#    assert.equal result.length, 1
+#    assert.equal result[0].title, "Home"
+#
   it "$and operator", ->
     a = create()
     result = _.query a, likes: {$gt: 5}, colors: {$contains: "yellow"}
     assert.equal result.length, 1
     assert.equal result[0].title, "Home"
 
+  it "$and operator (object)", ->
+    a = create()
+    result = _.query a, $and: [{likes: {$gt: 5}}, {colors: {$contains: "yellow"}}]
+    assert.equal result.length, 1
+    assert.equal result[0].title, "Home"
+
   it "$and operator (explicit)", ->
     a = create()
-    result = _.query a, $and: {likes: {$gt: 5}, colors: {$contains: "yellow"}}
+    result = _.query a, $and: [{likes: {$gt: 5}}, {colors: {$contains: "yellow"}}]
     assert.equal result.length, 1
     assert.equal result[0].title, "Home"
 
   it "$or operator", ->
     a = create()
-    result = _.query a, $or: {likes: {$gt: 5}, colors: {$contains: "yellow"}}
+    result = _.query a, $or: [{likes: {$gt: 5}}, {colors: {$contains: "yellow"}}]
     assert.equal result.length, 2
 
   it "$or2 operator", ->
     a = create()
-    result = _.query a, $or: {likes: {$gt: 5}, featured: true}
+    result = _.query a, $or: [{likes: {$gt: 5}}, {featured: true}]
     assert.equal result.length, 3
 
   it "$nor operator", ->
     a = create()
-    result = _.query a, $nor: {likes: {$gt: 5}, colors: {$contains: "yellow"}}
+    result = _.query a, $nor: [{likes: {$gt: 5}}, {colors: {$contains: "yellow"}}]
     assert.equal result.length, 1
     assert.equal result[0].title, "About"
 
@@ -304,6 +321,7 @@ describe "Underscore Query Tests", ->
       ]}
     ]
 
+    console.log("=========================================")
     text_search = {$likeI: "love"}
 
     result = _.query a, $or:
@@ -449,19 +467,19 @@ describe "Underscore Query Tests", ->
     assert.equal result[0].title, "Home"
     assert.equal result[1].title, "About"
 
-  it "works with underscore chain", ->
-    a = create()
-    q =
-      $or: [
-        {title:"Home"}
-        {title:"About"}
-      ]
-    result = _.chain(a).query(q).pluck("title").value()
-
-    assert.equal result.length, 2
-    assert.equal result[0], "Home"
-    assert.equal result[1], "About"
-
+#  it "works with underscore chain", ->
+#    a = create()
+#    q =
+#      $or: [
+#        {title:"Home"}
+#        {title:"About"}
+#      ]
+#    result = _.chain(a).query(q).pluck("title").value()
+#
+#    assert.equal result.length, 2
+#    assert.equal result[0], "Home"
+#    assert.equal result[1], "About"
+##
   it "works with a getter property", ->
     Backbone = require "backbone"
     a = new Backbone.Collection [
@@ -505,136 +523,135 @@ describe "Underscore Query Tests", ->
     assert.equal result2.at(0).get("title"), "about"
     assert.equal result2.pluck("title")[0], "about"
 
-    result3 = a.buildQuery().not(title:"test").run()
-    assert.equal result3.length, 1
-    assert.equal result3[0].get("title"), "about"
+#    result3 = a.buildQuery().not(title:"test").run()
+#    assert.equal result3.length, 1
+#    assert.equal result3[0].get("title"), "about"
 
 
 
-
-  it "can be used for live collections", ->
-    Backbone = require "backbone"
-    class Collection extends Backbone.Collection
-      query: (params) ->
-        if params
-          _.query @models, params, "get"
-        else
-          _.query.build @models, "get"
-      whereBy: (params) -> new @constructor @query(params)
-      setFilter: (parent, query) ->
-
-        check = _.query.tester(query, "get")
-
-        @listenTo parent,
-          add: (model) -> if check(model) then @add(model)
-          remove: @remove
-          change: (model) ->
-            if check(model) then @add(model) else @remove(model)
-
-        @add _.query(parent.models, query, "get")
-
-    parent = new Collection [
-      {title:"Home", colors:["red","yellow","blue"], likes:12, featured:true, content: "Dummy content about coffeescript"}
-      {title:"About", colors:["red"], likes:2, featured:true, content: "dummy content about javascript"}
-      {title:"Contact", colors:["red","blue"], likes:20, content: "Dummy content about PHP"}
-    ]
-    live = new Collection
-    live.setFilter parent, {likes:$gt:15}
-
-    assert.equal parent.length, 3
-    assert.equal live.length, 1
-
-    # Change Events
-    parent.at(0).set("likes",16)
-    assert.equal live.length, 2
-    parent.at(2).set("likes",2)
-    assert.equal live.length, 1
-
-    # Add to Parent
-    parent.add [{title:"New", likes:21}, {title:"New2", likes:3}]
-    assert.equal live.length, 2
-    assert.equal parent.length, 5
-
-    # Remove from Parent
-    parent.pop()
-    parent.pop()
-    assert.equal live.length, 1
-
-  it "buildQuery works in oo fashion", ->
-    a = create()
-    query = _.query.build(a)
-      .and({likes: {$gt: 5}})
-      .or({content: {$like: "PHP"}})
-      .or({colors: {$contains: "yellow"}})
-
-    result = query.run()
-
-    assert.equal result.length, 2
-
-    result = _.query.build()
-      .and(likes: $lt: 15)
-      .or(content: $like: "Dummy")
-      .or(featured: $exists: true)
-      .not(colors: $contains: "yellow")
-      .run(a)
-
-    assert.equal result.length, 1
-    assert.equal result[0].title, "About"
-
-
-
-  it "works with dot notation", ->
-    collection =  [
-      {title:"Home", stats:{likes:10, views:{a:{b:500}}}}
-      {title:"About", stats:{likes:5, views:{a:{b:234}}}}
-      {title:"Code", stats:{likes:25, views:{a:{b:796}}}}
-    ]
-
-    result = _.query collection, {"stats.likes":5}
-    assert.equal result.length, 1
-    assert.equal result[0].title, "About"
-
-    result = _.query collection, {"stats.views.a.b":796}
-    assert.equal result.length, 1
-    assert.equal result[0].title, "Code"
-
-  it "works with seperate query args", ->
-    collection =  [
-      {title:"Home", stats:{likes:10, views:{a:{b:500}}}}
-      {title:"About", stats:{likes:5, views:{a:{b:234}}}}
-      {title:"Code", stats:{likes:25, views:{a:{b:796}}}}
-    ]
-    query = _.query.build(collection)
-      .and("title", "Home")
-    result = query.run()
-
-    assert.equal result.length, 1
-    assert.equal result[0].title, "Home"
-
-  it "$computed", ->
-    Backbone = require "backbone"
-    class testModel extends Backbone.Model
-      full_name: -> "#{@get 'first_name'} #{@get 'last_name'}"
-
-    a = new testModel
-      first_name: "Dave"
-      last_name: "Tonge"
-    b = new testModel
-      first_name: "John"
-      last_name: "Smith"
-    c = [a,b]
-
-    result = _.query c,
-      full_name: $computed: "Dave Tonge"
-
-    assert.equal result.length, 1
-    assert.equal result[0].get("first_name"), "Dave"
-
-    result = _.query c,
-      full_name: $computed: $likeI: "n sm"
-    assert.equal result.length, 1
-    assert.equal result[0].get("first_name"), "John"
-
+#  it "can be used for live collections", ->
+#    Backbone = require "backbone"
+#    class Collection extends Backbone.Collection
+#      query: (params) ->
+#        if params
+#          _.query @models, params, "get"
+#        else
+#          _.query.build @models, "get"
+#      whereBy: (params) -> new @constructor @query(params)
+#      setFilter: (parent, query) ->
+#
+#        check = _.query.tester(query, "get")
+#
+#        @listenTo parent,
+#          add: (model) -> if check(model) then @add(model)
+#          remove: @remove
+#          change: (model) ->
+#            if check(model) then @add(model) else @remove(model)
+#
+#        @add _.query(parent.models, query, "get")
+#
+#    parent = new Collection [
+#      {title:"Home", colors:["red","yellow","blue"], likes:12, featured:true, content: "Dummy content about coffeescript"}
+#      {title:"About", colors:["red"], likes:2, featured:true, content: "dummy content about javascript"}
+#      {title:"Contact", colors:["red","blue"], likes:20, content: "Dummy content about PHP"}
+#    ]
+#    live = new Collection
+#    live.setFilter parent, {likes:$gt:15}
+#
+#    assert.equal parent.length, 3
+#    assert.equal live.length, 1
+#
+#    # Change Events
+#    parent.at(0).set("likes",16)
+#    assert.equal live.length, 2
+#    parent.at(2).set("likes",2)
+#    assert.equal live.length, 1
+#
+#    # Add to Parent
+#    parent.add [{title:"New", likes:21}, {title:"New2", likes:3}]
+#    assert.equal live.length, 2
+#    assert.equal parent.length, 5
+#
+#    # Remove from Parent
+#    parent.pop()
+#    parent.pop()
+#    assert.equal live.length, 1
+#
+#  it "buildQuery works in oo fashion", ->
+#    a = create()
+#    query = _.query.build(a)
+#      .and({likes: {$gt: 5}})
+#      .or({content: {$like: "PHP"}})
+#      .or({colors: {$contains: "yellow"}})
+#
+#    result = query.run()
+#
+#    assert.equal result.length, 2
+#
+#    result = _.query.build()
+#      .and(likes: $lt: 15)
+#      .or(content: $like: "Dummy")
+#      .or(featured: $exists: true)
+#      .not(colors: $contains: "yellow")
+#      .run(a)
+#
+#    assert.equal result.length, 1
+#    assert.equal result[0].title, "About"
+#
+#
+#
+#  it "works with dot notation", ->
+#    collection =  [
+#      {title:"Home", stats:{likes:10, views:{a:{b:500}}}}
+#      {title:"About", stats:{likes:5, views:{a:{b:234}}}}
+#      {title:"Code", stats:{likes:25, views:{a:{b:796}}}}
+#    ]
+#
+#    result = _.query collection, {"stats.likes":5}
+#    assert.equal result.length, 1
+#    assert.equal result[0].title, "About"
+#
+#    result = _.query collection, {"stats.views.a.b":796}
+#    assert.equal result.length, 1
+#    assert.equal result[0].title, "Code"
+#
+#  it "works with seperate query args", ->
+#    collection =  [
+#      {title:"Home", stats:{likes:10, views:{a:{b:500}}}}
+#      {title:"About", stats:{likes:5, views:{a:{b:234}}}}
+#      {title:"Code", stats:{likes:25, views:{a:{b:796}}}}
+#    ]
+#    query = _.query.build(collection)
+#      .and("title", "Home")
+#    result = query.run()
+#
+#    assert.equal result.length, 1
+#    assert.equal result[0].title, "Home"
+#
+#  it "$computed", ->
+#    Backbone = require "backbone"
+#    class testModel extends Backbone.Model
+#      full_name: -> "#{@get 'first_name'} #{@get 'last_name'}"
+#
+#    a = new testModel
+#      first_name: "Dave"
+#      last_name: "Tonge"
+#    b = new testModel
+#      first_name: "John"
+#      last_name: "Smith"
+#    c = [a,b]
+#
+#    result = _.query c,
+#      full_name: $computed: "Dave Tonge"
+#
+#    assert.equal result.length, 1
+#    assert.equal result[0].get("first_name"), "Dave"
+#
+#    result = _.query c,
+#      full_name: $computed: $likeI: "n sm"
+#    assert.equal result.length, 1
+#    assert.equal result[0].get("first_name"), "John"
+#
   it "Handles multiple inequalities", ->
     a = create()
     result = _.query a, likes: {  $gt: 2, $lt: 20  }
@@ -668,70 +685,70 @@ describe "Underscore Query Tests", ->
     assert.equal result.length, 1
     assert.equal result[0].title, "Home"
 
-  it "has a score method", ->
-    collection = [
-      { name:'dress',  color:'red',   price:100 }
-      { name:'shoes',  color:'black', price:120 }
-      { name:'jacket', color:'blue',  price:150 }
-    ]
-
-    results = _.query.score( collection, { price: {$lt:140}, color: {$in:['red', 'blue'] }})
-
-    assert.equal _.findWhere(results, {name:'dress'})._score, 1
-    assert.equal _.findWhere(results, {name:'shoes'})._score, 0.5
-
-  it "has a score method with a $boost operator", ->
-    collection = [
-      { name:'dress',  color:'red',   price:100 }
-      { name:'shoes',  color:'black', price:120 }
-      { name:'jacket', color:'blue',  price:150 }
-    ]
-
-    results = _.query.score( collection, { price: 100, color: {$in:['black'], $boost:3 }})
-
-    assert.equal _.findWhere(results, {name:'dress'})._score, 0.5
-    assert.equal _.findWhere(results, {name:'shoes'})._score, 1.5
-
-  it "has a score method with a $boost operator - 2", ->
-    collection = [
-      { name:'dress',  color:'red',   price:100 }
-      { name:'shoes',  color:'black', price:120 }
-      { name:'jacket', color:'blue',  price:150 }
-    ]
-
-    results = _.query.score( collection, { name: {$like:'dre', $boost:5}, color: {$in:['black'], $boost:2 }})
-
-    assert.equal _.findWhere(results, {name:'dress'})._score, 2.5
-    assert.equal _.findWhere(results, {name:'shoes'})._score, 1
-
-  it "score method throws if compound query", ->
-    collection = [
-      { name:'dress',  color:'red',   price:100 }
-      { name:'shoes',  color:'black', price:120 }
-      { name:'jacket', color:'blue',  price:150 }
-    ]
-
-    assert.throws ->
-      _.query.score collection,
-        $and: price: 100
-        $or: [
-          {color: 'red'}
-          {color: 'blue'}
-        ]
-
-  it "score method throws if non $and query", ->
-    collection = [
-      { name:'dress',  color:'red',   price:100 }
-      { name:'shoes',  color:'black', price:120 }
-      { name:'jacket', color:'blue',  price:150 }
-    ]
-
-    assert.throws ->
-      _.query.score collection,
-        $or: [
-          {color: 'red'}
-          {color: 'blue'}
-        ]
+#  it "has a score method", ->
+#    collection = [
+#      { name:'dress',  color:'red',   price:100 }
+#      { name:'shoes',  color:'black', price:120 }
+#      { name:'jacket', color:'blue',  price:150 }
+#    ]
+#
+#    results = _.query.score( collection, { price: {$lt:140}, color: {$in:['red', 'blue'] }})
+#
+#    assert.equal _.findWhere(results, {name:'dress'})._score, 1
+#    assert.equal _.findWhere(results, {name:'shoes'})._score, 0.5
+#
+#  it "has a score method with a $boost operator", ->
+#    collection = [
+#      { name:'dress',  color:'red',   price:100 }
+#      { name:'shoes',  color:'black', price:120 }
+#      { name:'jacket', color:'blue',  price:150 }
+#    ]
+#
+#    results = _.query.score( collection, { price: 100, color: {$in:['black'], $boost:3 }})
+#
+#    assert.equal _.findWhere(results, {name:'dress'})._score, 0.5
+#    assert.equal _.findWhere(results, {name:'shoes'})._score, 1.5
+#
+#  it "has a score method with a $boost operator - 2", ->
+#    collection = [
+#      { name:'dress',  color:'red',   price:100 }
+#      { name:'shoes',  color:'black', price:120 }
+#      { name:'jacket', color:'blue',  price:150 }
+#    ]
+#
+#    results = _.query.score( collection, { name: {$like:'dre', $boost:5}, color: {$in:['black'], $boost:2 }})
+#
+#    assert.equal _.findWhere(results, {name:'dress'})._score, 2.5
+#    assert.equal _.findWhere(results, {name:'shoes'})._score, 1
+#
+#  it "score method throws if compound query", ->
+#    collection = [
+#      { name:'dress',  color:'red',   price:100 }
+#      { name:'shoes',  color:'black', price:120 }
+#      { name:'jacket', color:'blue',  price:150 }
+#    ]
+#
+#    assert.throws ->
+#      _.query.score collection,
+#        $and: price: 100
+#        $or: [
+#          {color: 'red'}
+#          {color: 'blue'}
+#        ]
+#
+#  it "score method throws if non $and query", ->
+#    collection = [
+#      { name:'dress',  color:'red',   price:100 }
+#      { name:'shoes',  color:'black', price:120 }
+#      { name:'jacket', color:'blue',  price:150 }
+#    ]
+#
+#    assert.throws ->
+#      _.query.score collection,
+#        $or: [
+#          {color: 'red'}
+#          {color: 'blue'}
+#        ]
 
   # not parallel to MongoDB
   it "$not operator", ->
@@ -767,10 +784,10 @@ describe "Underscore Query Tests", ->
     assert.equal result.length, 0
 
 #  This query is not a valid MongoDB query, but if it were one would expect it to yield an empty set
-#  it "$nor combination of $gt and $lt  - values", ->
-#    a = create()
-#    result = _.query a, {likes: {$nor: [{ $gt: 2}, {$lt: 20}]}}
-#    assert.equal result.length, 0
+  it "$nor combination of $gt and $lt  - values", ->
+    a = create()
+    result = _.query a, {likes: {$nor: [{ $gt: 2}, {$lt: 20}]}}
+    assert.equal result.length, 0
 
   it "combination of $gt  and $not", ->
     a = create()
@@ -791,7 +808,7 @@ describe "Underscore Query Tests", ->
 
   it "returns Query function", ->
     a = create()
-    fn = _.Query {likes: 12}
+    fn = Logic.Query {likes: 12}
     result = a.filter fn
     assert.equal result.length, 1
     assert.equal result[0].likes, 12
@@ -804,28 +821,50 @@ describe "Underscore Query Tests", ->
     result = _.query a, {$or: [{likes: {$gt:1, $lte:2}}, {likes: {$gt:11, $lte:12}}]}
     assert.equal result.length, 2
 
-it "$or operator", ->
-  a = create()
 
-  # This is standard MongoDB syntax, and the test passes
-  result = _.query a, {title: "About", $or: [{likes: {$gt:1, $lte:2}}, {likes: {$gt:11, $lte:12}}]}
-  assert.equal result.length, 1
+  it "$or operator", ->
+    a = create()
 
+    #  This is standard MongoDB syntax, and the test passes
+    result = _.query a, {title: "About", $or: [{likes: {$gt:1, $lte:2}}, {likes: {$gt:11, $lte:12}}]}
+    assert.equal result.length, 1
+
+    # This is not standard MongoDB syntax but I would like it to work
+    result = _.query a, {likes:{ $or: [{$gt:1, $lte:2}, {$gt:11, $lte:12}]}}
+    assert.equal result.length, 2
+    console.log result
+#
 
 it "Handles nested multiple inequalities: value and $and", ->
   a = create()
-  result = _.query a, $and: [likes: {  $gt: 2, $lt: 20  }]
+  result = _.query a, $and: [{likes: {  $gt: 2, $lt: 20  }}]
   assert.equal result.length, 1
   assert.equal result[0].title, "Home"
 
+  a = create()
+  query = $and: [{likes: {  $gt: 2}}, {likes: {$lt: 20  }}]
+  result = _.query a, query
+  assert.equal result.length, 1
+  assert.equal result[0].title, "Home"
+
+it "Handles inverted $and queries", ->
+  a = create()
+  query = likes: {$and: [{  $gt: 2, $lt: 20  }]}
+  result = _.query a, query
+  assert.equal result.length, 1
+  assert.equal result[0].title, "Home"
+
+  a = create()
+  query = likes: {$and: [{  $gt: 2}, {$lt: 20  }]}
+  result = _.query a, query
+  assert.equal result.length, 1
+  assert.equal result[0].title, "Home"
 
 it "Handles nested multiple inequalities: two ands", ->
   a = create()
   result = _.query a, $and: [{likes: {  $gt: 2}}, {likes: {$lt: 20  }} ]
   assert.equal result.length, 1
   assert.equal result[0].title, "Home"
-
-
 
 it "Handles nested multiple inequalities: two ors", ->
   a = create()
@@ -836,22 +875,26 @@ it "Handles nested multiple inequalities: two ors", ->
   assert.equal result[0].title, "About"
   assert.equal result[1].title, "Contact"
 
+# http://docs.mongodb.org/manual/reference/operator/query/and/
+it "Handles $or nested within $and", ->
 
-## This is not standard MongoDB syntax but I would like it to work
-#result = _.query a, {likes:{ $or: [{$gt:1, $lte:2}, {$gt:11, $lte:12}]}}
-#assert.equal result.length, 2
-#console.log result
+  q = { $and : [
+    { $or : [ { likes :2 }, { likes : 20 } ] },
+    { $or : [ { title : "Contact" }, { title: "About" } ] }
+  ]}
+  a = create()
+  result = _.query a,q
 
-## This standard MongoDB syntax and I would like it to work
-#it "Handles $or nested within $and", ->
-#
-#    # http://docs.mongodb.org/manual/reference/operator/query/and/
-#  q = { $and : [
-#    { $or : [ { likes :2 }, { price : 20 } ] },
-#    { $or : [ { title : "Contact" }, { title: "About" } ] }
-#  ]}
-#  a = create()
-#  result = _.query a,q
-#
-#  assert.equal result.length, 2
+  assert.equal result.length, 2
 
+
+it "Handes $where function", ->
+  a = create()
+  result = _.query a,  $where: -> @likes == 12
+  assert.equal result.length,1
+
+
+it "Handes $where string", ->
+  a = create()
+  result = _.query a,  $where: " return this.likes >= 12"
+  assert.equal result.length,2
